@@ -64,13 +64,13 @@ class Countdown
 		@operations = []
 		@nodes_n = 0
 		@solutions_n = 0
-		search(@target, 0, @target, @target, @target, @target, @target, @target, @target, @target, 1)
+		search(@target, ' ', @target, 0, 1)
 		puts "Nodes #{@nodes_n}"
 		puts "Solutions #{@solutions_n}"
 		STDOUT.flush
 	end
 
-	def search(tile1_pre, gen_pre, tile1_add, tile2_add, tile1_mul, tile2_mul, tile1_sub, tile2_sub, tile1_div, tile2_div, step)
+	def search(tile1_pre, ope_pre, tile2_pre, gen_pre, step)
 		@nodes_n += 1
 		if @target.pre == @target.nex
 			if @target.pre.val == @target.val
@@ -106,58 +106,79 @@ class Countdown
 					if is_unique_val?(tile1.nex, tile2)
 						gen = [ tile1.gen, tile2.gen ].max
 						if (tile1.idx > tile1_pre.idx && gen == gen_pre) || gen > gen_pre
-							res_add = tile1.val+tile2.val
-							res_mul = tile1.val*tile2.val
-							res_sub1 = tile1.val-tile2.val
-							res_sub2 = tile2.val-tile1.val
-							res_mod1 = tile1.val%tile2.val
-							res_div1 = tile1.val/tile2.val
-							res_mod2 = tile2.val%tile1.val
-							res_div2 = tile2.val/tile1.val
-							if tile1.idx > tile1_add.idx || tile2 != tile2_add
+							if tile1.idx > tile1_pre.idx || (ope_pre != '+' && ope_pre != '-') || tile2 != tile2_pre
+								res_add = tile1.val+tile2.val
 								@operations.push(Operation.new(tile2.gen, tile1.val, '+', tile2.val, res_add))
 								tile2.set(res_add, step)
-								search(tile1, gen, tile1, tile2, @target, @target, @target, @target, @target, @target, step+1)
+								search(tile1, '+', tile2, gen, step+1)
 								operation = @operations.pop
 								tile2.set(operation.val_b, operation.gen2)
+							else
+								res_add = 0
 							end
-							if tile1.idx > tile1_mul.idx || tile2 != tile2_mul
-								if res_mul != res_add
+							if tile1.idx > tile1_pre.idx || (ope_pre != '*' && ope_pre != '/') || tile2 != tile2_pre
+								if tile1.val*tile2.val != res_add
+									res_mul = tile1.val*tile2.val
 									@operations.push(Operation.new(tile2.gen, tile1.val, '*', tile2.val, res_mul))
 									tile2.set(res_mul, step)
-									search(tile1, gen, @target, @target, tile1, tile2, @target, @target, @target, @target, step+1)
+									search(tile1, '*', tile2, gen, step+1)
 									operation = @operations.pop
 									tile2.set(operation.val_b, operation.gen2)
+								else
+									res_mul = 0
 								end
+							else
+								res_mul = 0
 							end
-							if tile1.idx > tile1_sub.idx || tile2 != tile2_sub
-								if res_sub1 > 0
+							if tile1.idx > tile1_pre.idx || ope_pre != '-' || tile2 != tile2_pre
+								if tile1.val-tile2.val > 0
+									res_sub1 = tile1.val-tile2.val
 									@operations.push(Operation.new(tile2.gen, tile1.val, '-', tile2.val, res_sub1))
 									tile2.set(res_sub1, step)
-									search(tile1, gen, tile1, tile2, @target, @target, tile1, tile2, @target, @target, step+1)
+									search(tile1, '-', tile2, gen, step+1)
 									operation = @operations.pop
 									tile2.set(operation.val_b, operation.gen2)
+								else
+									res_sub1 = 0
 								end
-								if res_sub2 > 0
+								if tile2.val-tile1.val > 0
+									res_sub2 = tile2.val-tile1.val
 									@operations.push(Operation.new(tile2.gen, tile2.val, '-', tile1.val, res_sub2))
 									tile2.set(res_sub2, step)
-									search(tile1, gen, tile1, tile2, @target, @target, tile1, tile2, @target, @target, step+1)
+									search(tile1, '-', tile2, gen, step+1)
 									operation = @operations.pop
 									tile2.set(operation.val_a, operation.gen2)
+								else
+									res_sub2 = 0
 								end
+							else
+								res_sub1 = 0
+								res_sub2 = 0
 							end
-							if tile1.idx > tile1_div.idx || tile2 != tile2_div
+							if tile1.idx > tile1_pre.idx || ope_pre != '/' || tile2 != tile2_pre
+								res_mod1 = tile1.val%tile2.val
+								if res_mod1 == 0
+									res_div1 = tile1.val/tile2.val
+								else
+									res_div1 = 0
+								end
 								if res_mod1 == 0 && res_div1 != res_mul && res_div1 != res_sub1 && res_div1 != res_sub2
 									@operations.push(Operation.new(tile2.gen, tile1.val, '/', tile2.val, res_div1))
 									tile2.set(res_div1, step)
-									search(tile1, gen, @target, @target, tile1, tile2, @target, @target, tile1, tile2, step+1)
+									search(tile1, '/', tile2, gen, step+1)
 									operation = @operations.pop
 									tile2.set(operation.val_b, operation.gen2)
+								end
+								res_mod2 = tile2.val%tile1.val
+								if res_mod2 == 0
+									res_div2 = tile2.val/tile1.val
+								else
+									res_div2 = 0
 								end
 								if res_mod2 == 0 && res_div2 != res_mul && res_div2 != res_sub1 && res_div2 != res_sub2 && (res_mod1 != 0 || res_div2 != res_div1)
 									@operations.push(Operation.new(tile2.gen, tile2.val, '/', tile1.val, res_div2))
 									tile2.set(res_div2, step)
-									search(tile1, gen, @target, @target, tile1, tile2, @target, @target, tile1, tile2, step+1)
+									search(tile1, '/', tile2, gen, step+1)
 									operation = @operations.pop
 									tile2.set(operation.val_a, operation.gen2)
 								end
